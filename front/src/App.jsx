@@ -6,6 +6,7 @@ import RequireAdmin from "./routes/RequireAdmin.jsx";
 import RequireAuth from "./routes/RequireAuth.jsx";
 import AdminAttendancePage from "./pages/AdminAttendancePage.jsx";
 import AdminReportsPage from "./pages/AdminReportsPage.jsx";
+import AdminUsersPage from "./pages/AdminUsersPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import HistoryPage from "./pages/HistoryPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
@@ -56,6 +57,14 @@ export default function App() {
             element={
               <RequireAdmin>
                 <AdminReportsPage />
+              </RequireAdmin>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <RequireAdmin>
+                <AdminUsersPage />
               </RequireAdmin>
             }
           />

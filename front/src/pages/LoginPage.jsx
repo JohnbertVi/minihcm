@@ -65,7 +65,7 @@ export default function LoginPage() {
 
     try {
       await login(form.email, form.password);
-      notify.success("Signed in successfully.");
+      notify.success("Welcome back!");
       navigate("/dashboard");
     } catch (err) {
       notify.error(getErrorMessage(err));

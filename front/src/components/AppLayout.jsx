@@ -5,10 +5,12 @@ import {
   History,
   ShieldCheck,
   BarChart3,
+  UsersRound,
   LogOut,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth.js";
 import { logout } from "@/services/authService.js";
+import { notify } from "@/utils/feedback.js";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -39,9 +41,11 @@ function getInitials(name) {
     .toUpperCase();
 }
 
-function SidebarNavLink({ to, icon: Icon, children }) {
+function SidebarNavLink({ to, icon: Icon, children, end = false }) {
   const location = useLocation();
-  const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`);
+  const isActive = end
+    ? location.pathname === to
+    : location.pathname === to || location.pathname.startsWith(`${to}/`);
 
   return (
     <SidebarMenuItem>
@@ -65,8 +69,10 @@ export default function AppLayout() {
     setLoggingOut(true);
     try {
       await logout();
+      notify.success("Signed out successfully.");
       navigate("/login");
     } catch {
+      notify.error("Could not sign out. Please try again.");
       setLoggingOut(false);
     }
   }
@@ -110,11 +116,14 @@ export default function AppLayout() {
               <SidebarGroupLabel>Administration</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
-                  <SidebarNavLink to="/admin" icon={ShieldCheck}>
+                  <SidebarNavLink to="/admin" icon={ShieldCheck} end>
                     Attendance
                   </SidebarNavLink>
                   <SidebarNavLink to="/admin/reports" icon={BarChart3}>
                     Reports
+                  </SidebarNavLink>
+                  <SidebarNavLink to="/admin/users" icon={UsersRound}>
+                    Users
                   </SidebarNavLink>
                 </SidebarMenu>
               </SidebarGroupContent>

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import EmptyState from "@/components/EmptyState.jsx";
+import { TableSkeletonRows } from "@/components/LoadingStates.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
 import api from "@/services/api.js";
 import { getErrorMessage, notify } from "@/utils/feedback.js";
@@ -26,6 +27,7 @@ export default function AdminAttendancePage() {
   const [date, setDate] = useState(todayIso());
   const [records, setRecords] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   async function loadRecords() {
@@ -37,6 +39,8 @@ export default function AdminAttendancePage() {
     let active = true;
 
     async function fetchRecords() {
+      setLoading(true);
+
       try {
         const { data } = await api.get("/admin/attendance", { params: { date } });
 
@@ -47,6 +51,10 @@ export default function AdminAttendancePage() {
         if (active) {
           notify.error(getErrorMessage(err));
         }
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     }
 
@@ -56,6 +64,8 @@ export default function AdminAttendancePage() {
       active = false;
     };
   }, [date]);
+
+
 
   async function saveEdit(event) {
     event.preventDefault();
@@ -111,7 +121,8 @@ export default function AdminAttendancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-emerald-100">
-                {records.map((record) => (
+                {loading && <TableSkeletonRows columns={6} rows={6} />}
+                {!loading && records.map((record) => (
                   <tr className="transition hover:bg-emerald-50/40" key={record.id}>
                     <td className="px-4 py-3 font-medium text-emerald-950">
                       {record.employeeName || record.email}
@@ -139,7 +150,7 @@ export default function AdminAttendancePage() {
                     </td>
                   </tr>
                 ))}
-                {!records.length && (
+                {!loading && !records.length && (
                   <EmptyState colSpan={6} title="No records for this date" description="Completed punch records will appear here." />
                 )}
               </tbody>
@@ -191,7 +202,7 @@ export default function AdminAttendancePage() {
                 {saving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving…
+                    Saving...
                   </>
                 ) : (
                   "Save"

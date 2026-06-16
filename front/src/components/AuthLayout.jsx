@@ -65,19 +65,6 @@ export default function AuthLayout() {
           />
 
           <div className="relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...springTransition, delay: 0.15 }}
-              className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 p-2 ring-1 ring-white/20 backdrop-blur-sm"
-            >
-              <img
-                src="/logo.png"
-                alt="Mini Time Tracking"
-                className="h-full w-full object-contain drop-shadow-sm"
-              />
-            </motion.div>
-
             <motion.p
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
@@ -131,21 +118,6 @@ export default function AuthLayout() {
           className="relative flex flex-col justify-center overflow-hidden p-6 sm:p-10"
         >
           <div className="mx-auto w-full max-w-[380px]">
-            {/* mobile logo fallback */}
-            <div className="mb-8 flex items-center justify-center gap-3 md:hidden">
-              <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-emerald-600 p-1.5">
-                <img
-                  src="/logo.png"
-                  alt="Mini Time Tracking"
-                  className="h-full w-full object-contain"
-                />
-              </div>
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">Mini Time Tracking</p>
-                <p className="text-xs text-emerald-700/70">Attendance system</p>
-              </div>
-            </div>
-
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={location.pathname}

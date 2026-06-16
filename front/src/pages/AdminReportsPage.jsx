@@ -11,10 +11,11 @@ import {
 } from "@/components/ui/select";
 import EmptyState from "@/components/EmptyState.jsx";
 import KpiCard from "@/components/KpiCard.jsx";
+import { KpiSkeletonGrid, TableSkeletonRows } from "@/components/LoadingStates.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
 import api from "@/services/api.js";
 import { getErrorMessage, notify } from "@/utils/feedback.js";
-import { todayIso } from "@/utils/format.js";
+import { formatDurationMinutes, todayIso } from "@/utils/format.js";
 
 function weekStartIso() {
   const date = new Date();
@@ -28,6 +29,7 @@ export default function AdminReportsPage() {
   const [date, setDate] = useState(todayIso());
   const [weekStart, setWeekStart] = useState(weekStartIso());
   const [reports, setReports] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const endpoint = mode === "daily" ? "/admin/reports/daily" : "/admin/reports/weekly";
@@ -36,6 +38,8 @@ export default function AdminReportsPage() {
     let active = true;
 
     async function fetchReports() {
+      setLoading(true);
+
       try {
         const { data } = await api.get(endpoint, { params });
 
@@ -45,6 +49,10 @@ export default function AdminReportsPage() {
       } catch (err) {
         if (active) {
           notify.error(getErrorMessage(err));
+        }
+      } finally {
+        if (active) {
+          setLoading(false);
         }
       }
     }
@@ -115,13 +123,17 @@ export default function AdminReportsPage() {
         }
       />
 
+      {loading ? (
+        <KpiSkeletonGrid count={5} className="lg:grid-cols-5" />
+      ) : (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard label="Records" value={totals.present} tone="good" />
         <KpiCard label="Late Employees" value={totals.late} tone="warn" />
         <KpiCard label="Overtime Hours" value={totals.overtimeHours.toFixed(2)} tone="info" />
-        <KpiCard label="Undertime Minutes" value={totals.undertimeMinutes} />
+        <KpiCard label="Undertime" value={formatDurationMinutes(totals.undertimeMinutes)} />
         <KpiCard label="Worked Hours" value={totals.totalWorkedHours.toFixed(2)} />
       </div>
+      )}
 
       <Card className="overflow-hidden border-emerald-100 bg-white shadow-sm">
         <CardContent className="p-0">
@@ -140,7 +152,8 @@ export default function AdminReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-emerald-100">
-                {reports.map((report) => (
+                {loading && <TableSkeletonRows columns={8} rows={6} />}
+                {!loading && reports.map((report) => (
                   <tr className="transition hover:bg-emerald-50/40" key={report.id}>
                     <td className="px-4 py-3 font-medium text-emerald-950">
                       {report.employeeName || report.userId}
@@ -157,14 +170,14 @@ export default function AdminReportsPage() {
                     <td className="px-4 py-3 text-emerald-800/70">
                       {Number(report.nightDiffHours || 0).toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-emerald-800/70">{report.lateMinutes} min</td>
-                    <td className="px-4 py-3 text-emerald-800/70">{report.undertimeMinutes} min</td>
+                    <td className="px-4 py-3 text-emerald-800/70">{formatDurationMinutes(report.lateMinutes)}</td>
+                    <td className="px-4 py-3 text-emerald-800/70">{formatDurationMinutes(report.undertimeMinutes)}</td>
                     <td className="px-4 py-3 text-emerald-800/70">
                       {Number(report.totalWorkedHours || 0).toFixed(2)}
                     </td>
                   </tr>
                 ))}
-                {!reports.length && (
+                {!loading && !reports.length && (
                   <EmptyState
                     colSpan={8}
                     title="No summaries found"

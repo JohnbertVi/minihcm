@@ -101,7 +101,7 @@ export default function RegisterPage() {
         password: form.password,
       });
       await refreshProfile();
-      notify.success("Account created.");
+      notify.success("Account created successfully. Welcome aboard!");
       navigate("/dashboard");
     } catch (err) {
       notify.error(getErrorMessage(err));
