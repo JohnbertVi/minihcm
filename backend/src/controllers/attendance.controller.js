@@ -183,7 +183,33 @@ export async function adminWeeklyReports(req, res, next) {
       .where("date", "<=", weekEnd)
       .get();
 
-    res.json({ weekStart, weekEnd, reports: snap.docs.map(serializeDoc) });
+    const grouped = snap.docs.map(serializeDoc).reduce((acc, report) => {
+      const key = report.userId;
+      const current = acc.get(key) || {
+        id: key,
+        userId: key,
+        employeeName: report.employeeName,
+        weekStart,
+        weekEnd,
+        regularHours: 0,
+        overtimeHours: 0,
+        nightDiffHours: 0,
+        lateMinutes: 0,
+        undertimeMinutes: 0,
+        totalWorkedHours: 0,
+      };
+
+      current.regularHours += report.regularHours || 0;
+      current.overtimeHours += report.overtimeHours || 0;
+      current.nightDiffHours += report.nightDiffHours || 0;
+      current.lateMinutes += report.lateMinutes || 0;
+      current.undertimeMinutes += report.undertimeMinutes || 0;
+      current.totalWorkedHours += report.totalWorkedHours || 0;
+      acc.set(key, current);
+      return acc;
+    }, new Map());
+
+    res.json({ weekStart, weekEnd, reports: Array.from(grouped.values()) });
   } catch (error) {
     next(error);
   }

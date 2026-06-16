@@ -8,8 +8,16 @@ import DashboardPage from "./pages/DashboardPage.jsx";
 import HistoryPage from "./pages/HistoryPage.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import RegisterPage from "./pages/RegisterPage.jsx";
+import FirebaseSetupNotice from "./components/FirebaseSetupNotice.jsx";
+import { useAuth } from "./hooks/useAuth.js";
 
 export default function App() {
+  const { isFirebaseConfigured, missingFirebaseConfig } = useAuth();
+
+  if (!isFirebaseConfigured) {
+    return <FirebaseSetupNotice missingKeys={missingFirebaseConfig} />;
+  }
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
