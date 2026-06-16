@@ -1,6 +1,6 @@
 # Mini Time Tracking
 
-A lightweight Human Capital Management (HCM) time-in/time-out system built with free and open-source tools.
+A lightweight Human Capital Management (HCM) time-in/time-out system 
 
 ## Overview
 
