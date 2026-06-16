@@ -51,23 +51,44 @@ export async function createOrUpdateProfile(uid, email, data) {
   return profile;
 }
 
-export async function getOpenAttendance(userId, date) {
-  const snap = await db
+function timestampToMillis(value) {
+  if (!value) {
+    return 0;
+  }
+
+  if (typeof value.toMillis === "function") {
+    return value.toMillis();
+  }
+
+  if (typeof value.toDate === "function") {
+    return value.toDate().getTime();
+  }
+
+  return 0;
+}
+
+export async function getOpenAttendance(userId, date = null) {
+  let query = db
     .collection("attendance")
     .where("userId", "==", userId)
-    .where("date", "==", date)
-    .limit(5)
-    .get();
+    .where("punchOut", "==", null);
+
+  if (date) {
+    query = query.where("date", "==", date);
+  }
+
+  const snap = await query.limit(10).get();
 
   return snap.docs
     .map((doc) => ({ id: doc.id, ...doc.data() }))
-    .find((record) => record.punchIn && !record.punchOut);
+    .filter((record) => record.punchIn && !record.punchOut)
+    .sort((a, b) => timestampToMillis(b.punchIn) - timestampToMillis(a.punchIn))[0] || null;
 }
 
 export async function punchIn(user) {
   const profile = normalizeProfile(user.profile);
   const date = todayForProfile(profile);
-  const openRecord = await getOpenAttendance(user.uid, date);
+  const openRecord = await getOpenAttendance(user.uid);
 
   if (openRecord) {
     return { record: openRecord, alreadyOpen: true };
@@ -121,11 +142,10 @@ export async function saveDailySummary(record, profile, editedBy = null) {
 
 export async function punchOut(user) {
   const profile = normalizeProfile(user.profile);
-  const date = todayForProfile(profile);
-  const openRecord = await getOpenAttendance(user.uid, date);
+  const openRecord = await getOpenAttendance(user.uid);
 
   if (!openRecord) {
-    const error = new Error("No open punch-in record found for today");
+    const error = new Error("No open punch-in record found");
     error.status = 400;
     throw error;
   }

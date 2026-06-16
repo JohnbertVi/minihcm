@@ -12,10 +12,10 @@ export default function KpiCard({ label, value, tone = "default" }) {
   return (
     <Card className={cn("shadow-sm transition hover:-translate-y-0.5 hover:shadow-md", tones[tone])}>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-emerald-700/80">{label}</CardTitle>
+        <CardTitle className="text-xs font-medium leading-5 text-emerald-700/80 sm:text-sm">{label}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-3xl font-semibold">{value}</p>
+        <p className="text-2xl font-semibold tabular-nums sm:text-3xl">{value}</p>
       </CardContent>
     </Card>
   );

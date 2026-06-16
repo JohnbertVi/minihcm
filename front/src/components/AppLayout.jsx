@@ -12,7 +12,6 @@ import { useAuth } from "@/hooks/useAuth.js";
 import { logout } from "@/services/authService.js";
 import { notify } from "@/utils/feedback.js";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarContent,
@@ -93,6 +92,7 @@ export default function AppLayout() {
               <span className="text-sm font-semibold text-emerald-950">Mini Time Tracking</span>
               <span className="text-xs text-emerald-700/80">Attendance</span>
             </div>
+            <SidebarTrigger className="ml-auto size-8 text-emerald-800 hover:bg-emerald-50 group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:ml-0" />
           </div>
         </SidebarHeader>
 
@@ -172,17 +172,16 @@ export default function AppLayout() {
       </Sidebar>
 
       <SidebarInset className="bg-gradient-to-br from-emerald-50/60 via-white to-emerald-50/40">
-        <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-emerald-100 bg-white/80 px-4 backdrop-blur">
-          <SidebarTrigger className="text-emerald-800 hover:bg-emerald-50" />
-          <Separator orientation="vertical" className="h-6 bg-emerald-100" />
+        <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-emerald-100 bg-white/85 px-3 backdrop-blur sm:px-4 md:h-16">
+          <SidebarTrigger className="size-8 text-emerald-800 hover:bg-emerald-50 md:hidden" />
           <div className="flex-1">
-            <h1 className="text-lg font-semibold text-emerald-950">
+            <h1 className="text-base font-semibold text-emerald-950 sm:text-lg">
               {isAdmin ? "Admin Workspace" : "Employee Workspace"}
             </h1>
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+        <main className="mx-auto w-full max-w-7xl p-3 sm:p-5 lg:p-8">
           <Outlet />
         </main>
       </SidebarInset>

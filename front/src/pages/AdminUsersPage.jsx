@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import KpiCard from "@/components/KpiCard.jsx";
 import { KpiSkeletonGrid, TableSkeletonRows } from "@/components/LoadingStates.jsx";
 import EmptyState from "@/components/EmptyState.jsx";
@@ -76,7 +77,7 @@ export default function AdminUsersPage() {
         description="Review employee profiles, roles, schedules, and timezone setup."
         meta="Administration"
         actions={
-          <div className="relative w-full min-w-[240px] sm:w-80">
+          <div className="relative w-full sm:w-80">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-700/60" />
             <Input
               aria-label="Search users"
@@ -99,7 +100,61 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      <Card className="overflow-hidden border-emerald-100 bg-white shadow-sm">
+      <div className="space-y-3 md:hidden">
+        {loading && Array.from({ length: 4 }).map((_, index) => (
+          <Card className="border-emerald-100 bg-white shadow-sm" key={index}>
+            <CardContent className="space-y-4 p-4">
+              <Skeleton className="h-5 w-36 bg-emerald-100" />
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((__, itemIndex) => (
+                  <Skeleton className="h-10 bg-emerald-100" key={itemIndex} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {!loading && filteredUsers.map((user) => (
+          <Card className="border-emerald-100 bg-white shadow-sm" key={user.id || user.email}>
+            <CardContent className="space-y-4 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-emerald-950">{user.name || user.email}</p>
+                  <p className="break-all text-xs text-emerald-800/70">{user.email}</p>
+                </div>
+                <Badge
+                  className={
+                    user.role === "admin"
+                      ? "shrink-0 bg-sky-100 text-sky-800"
+                      : "shrink-0 bg-emerald-100 text-emerald-800"
+                  }
+                >
+                  {user.role || "employee"}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <UserMetric label="Timezone" value={user.timezone || "Asia/Manila"} />
+                <UserMetric label="Schedule" value={`${user.schedule?.start || "09:00"} to ${user.schedule?.end || "18:00"}`} />
+                <UserMetric label="Created" value={formatTimestamp(user.createdAt)} />
+                <UserMetric label="Updated" value={formatTimestamp(user.updatedAt)} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {!loading && !filteredUsers.length && (
+          <Card className="border-emerald-100 bg-white shadow-sm">
+            <CardContent className="p-6 text-center">
+              <p className="text-sm font-semibold text-emerald-950">
+                {query ? "No users match your search" : "No users found"}
+              </p>
+              <p className="mt-1 text-sm text-emerald-800/70">
+                {query ? "Try a different name, email, role, or timezone." : "Registered users will appear here."}
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <Card className="hidden overflow-hidden border-emerald-100 bg-white shadow-sm md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[920px] text-left text-sm">
@@ -153,5 +208,14 @@ export default function AdminUsersPage() {
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+function UserMetric({ label, value }) {
+  return (
+    <div className="rounded-md border border-emerald-100 bg-emerald-50/40 p-3">
+      <p className="text-xs font-medium text-emerald-700/80">{label}</p>
+      <p className="mt-1 break-words font-semibold text-emerald-950">{value}</p>
+    </div>
   );
 }

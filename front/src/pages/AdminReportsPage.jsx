@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -69,10 +70,11 @@ export default function AdminReportsPage() {
       present: acc.present + 1,
       late: acc.late + (report.lateMinutes > 0 ? 1 : 0),
       overtimeHours: acc.overtimeHours + (report.overtimeHours || 0),
+      nightDiffHours: acc.nightDiffHours + (report.nightDiffHours || 0),
       undertimeMinutes: acc.undertimeMinutes + (report.undertimeMinutes || 0),
       totalWorkedHours: acc.totalWorkedHours + (report.totalWorkedHours || 0),
     }),
-    { present: 0, late: 0, overtimeHours: 0, undertimeMinutes: 0, totalWorkedHours: 0 },
+    { present: 0, late: 0, overtimeHours: 0, nightDiffHours: 0, undertimeMinutes: 0, totalWorkedHours: 0 },
   );
 
   return (
@@ -82,11 +84,11 @@ export default function AdminReportsPage() {
         description="Daily and weekly summaries generated from employee punch records."
         meta="Reporting"
         actions={
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1.5">
+          <div className="grid w-full gap-3 sm:flex sm:w-auto sm:flex-wrap sm:items-end">
+            <div className="space-y-1.5 sm:w-auto">
               <Label htmlFor="report-mode">Report</Label>
               <Select value={mode} onValueChange={(value) => setMode(value)}>
-                <SelectTrigger id="report-mode" className="w-[160px]">
+                <SelectTrigger id="report-mode" className="w-full sm:w-[160px]">
                   <SelectValue placeholder="Select report" />
                 </SelectTrigger>
                 <SelectContent>
@@ -104,7 +106,7 @@ export default function AdminReportsPage() {
                   type="date"
                   value={date}
                   onChange={(event) => setDate(event.target.value)}
-                  className="w-auto"
+                  className="w-full sm:w-auto"
                 />
               </div>
             ) : (
@@ -115,7 +117,7 @@ export default function AdminReportsPage() {
                   type="date"
                   value={weekStart}
                   onChange={(event) => setWeekStart(event.target.value)}
-                  className="w-auto"
+                  className="w-full sm:w-auto"
                 />
               </div>
             )}
@@ -130,22 +132,69 @@ export default function AdminReportsPage() {
         <KpiCard label="Records" value={totals.present} tone="good" />
         <KpiCard label="Late Employees" value={totals.late} tone="warn" />
         <KpiCard label="Overtime Hours" value={totals.overtimeHours.toFixed(2)} tone="info" />
+        <KpiCard label="Night Differential" value={totals.nightDiffHours.toFixed(2)} />
         <KpiCard label="Undertime" value={formatDurationMinutes(totals.undertimeMinutes)} />
-        <KpiCard label="Worked Hours" value={totals.totalWorkedHours.toFixed(2)} />
       </div>
       )}
 
-      <Card className="overflow-hidden border-emerald-100 bg-white shadow-sm">
+      <div className="space-y-3 md:hidden">
+        {loading && Array.from({ length: 4 }).map((_, index) => (
+          <Card className="border-emerald-100 bg-white shadow-sm" key={index}>
+            <CardContent className="space-y-4 p-4">
+              <Skeleton className="h-5 w-36 bg-emerald-100" />
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 6 }).map((__, itemIndex) => (
+                  <Skeleton className="h-10 bg-emerald-100" key={itemIndex} />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {!loading && reports.map((report) => (
+          <Card className="border-emerald-100 bg-white shadow-sm" key={report.id}>
+            <CardContent className="space-y-4 p-4">
+              <div>
+                <p className="text-sm font-semibold text-emerald-950">
+                  {report.employeeName || report.userId}
+                </p>
+                <p className="text-xs text-emerald-800/70">
+                  {mode === "daily" ? report.date : `${report.weekStart} to ${report.weekEnd}`}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <ReportMetric label="Regular" value={Number(report.regularHours || 0).toFixed(2)} />
+                <ReportMetric label="Overtime" value={Number(report.overtimeHours || 0).toFixed(2)} />
+                <ReportMetric label="Night Differential" value={Number(report.nightDiffHours || 0).toFixed(2)} />
+                <ReportMetric label="Late" value={formatDurationMinutes(report.lateMinutes)} />
+                <ReportMetric label="Undertime" value={formatDurationMinutes(report.undertimeMinutes)} />
+                <ReportMetric label="Worked" value={Number(report.totalWorkedHours || 0).toFixed(2)} />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+        {!loading && !reports.length && (
+          <Card className="border-emerald-100 bg-white shadow-sm">
+            <CardContent className="p-6 text-center">
+              <p className="text-sm font-semibold text-emerald-950">No summaries found</p>
+              <p className="mt-1 text-sm text-emerald-800/70">
+                Reports appear after employees punch out and summaries are computed.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      <Card className="hidden overflow-hidden border-emerald-100 bg-white shadow-sm md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[980px] text-left text-sm">
+            <table className="w-full min-w-[1120px] text-left text-sm">
               <thead className="bg-emerald-50/80 text-xs uppercase text-emerald-800/70">
                 <tr>
                   <th className="px-4 py-3">Employee</th>
                   <th className="px-4 py-3">{mode === "daily" ? "Date" : "Week"}</th>
                   <th className="px-4 py-3">Regular</th>
-                  <th className="px-4 py-3">OT</th>
-                  <th className="px-4 py-3">ND</th>
+                  <th className="px-4 py-3">Overtime</th>
+                  <th className="px-4 py-3">Night Differential</th>
                   <th className="px-4 py-3">Late</th>
                   <th className="px-4 py-3">Undertime</th>
                   <th className="px-4 py-3">Worked</th>
@@ -190,5 +239,14 @@ export default function AdminReportsPage() {
         </CardContent>
       </Card>
     </section>
+  );
+}
+
+function ReportMetric({ label, value }) {
+  return (
+    <div className="rounded-md border border-emerald-100 bg-emerald-50/40 p-3">
+      <p className="text-xs font-medium text-emerald-700/80">{label}</p>
+      <p className="mt-1 break-words font-semibold text-emerald-950">{value}</p>
+    </div>
   );
 }

@@ -135,11 +135,11 @@ export default function DashboardPage() {
         description="Record attendance and keep the current shift visible."
         meta="Workspace"
         actions={
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-3">
             <Button
               onClick={() => requestPunch("/punch/in")}
               disabled={initialLoading || loading || Boolean(currentRecord)}
-              className="bg-emerald-600 hover:bg-emerald-700"
+              className="w-full bg-emerald-600 hover:bg-emerald-700 sm:w-auto"
             >
               {loading && pendingAction === "/punch/in" ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -152,7 +152,7 @@ export default function DashboardPage() {
               onClick={() => requestPunch("/punch/out")}
               disabled={initialLoading || loading || !currentRecord}
               variant="outline"
-              className="border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
+              className="w-full border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900 sm:w-auto"
             >
               {loading && pendingAction === "/punch/out" ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -166,7 +166,7 @@ export default function DashboardPage() {
       />
 
       <Card className="border-emerald-100 bg-white shadow-sm">
-        <CardContent className="grid gap-5 p-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:items-center">
+        <CardContent className="grid gap-5 p-4 sm:p-6 lg:grid-cols-[1.2fr_1fr_1fr] lg:items-center">
           <div className="space-y-2">
             <Badge className={currentRecord ? "bg-emerald-600 text-white" : "bg-slate-100 text-slate-700"}>
               {initialLoading ? "Loading" : currentRecord ? "Clocked in" : "Ready"}
@@ -180,7 +180,7 @@ export default function DashboardPage() {
                 {initialLoading ? (
                   <Skeleton className="mt-2 h-10 w-40 bg-emerald-100" />
                 ) : (
-                  <p className="font-mono text-4xl font-semibold text-emerald-950">
+                  <p className="font-mono text-3xl font-semibold text-emerald-950 sm:text-4xl">
                     {currentRecord ? formatElapsedTime(currentRecord.punchIn, now) : "0:00:00"}
                   </p>
                 )}
@@ -211,19 +211,22 @@ export default function DashboardPage() {
       </Card>
 
       {initialLoading ? (
-        <KpiSkeletonGrid count={4} />
+        <KpiSkeletonGrid count={5} className="lg:grid-cols-5" />
       ) : (
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
       >
         <motion.div variants={itemVariants}>
           <KpiCard label="Regular Hours" value={Number(summary?.regularHours || 0).toFixed(2)} tone="good" />
         </motion.div>
         <motion.div variants={itemVariants}>
           <KpiCard label="Overtime Hours" value={Number(summary?.overtimeHours || 0).toFixed(2)} tone="info" />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <KpiCard label="Night Differential" value={Number(summary?.nightDiffHours || 0).toFixed(2)} />
         </motion.div>
         <motion.div variants={itemVariants}>
           <KpiCard label="Late" value={formatDurationMinutes(summary?.lateMinutes)} tone="warn" />
@@ -240,19 +243,22 @@ export default function DashboardPage() {
           <p className="text-sm text-emerald-700/80">Completed daily summaries for the current week.</p>
         </div>
         {initialLoading ? (
-          <KpiSkeletonGrid count={4} />
+          <KpiSkeletonGrid count={5} className="lg:grid-cols-5" />
         ) : (
         <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
         >
           <motion.div variants={itemVariants}>
             <KpiCard label="Regular" value={(weekly?.regularHours || 0).toFixed(2)} />
           </motion.div>
           <motion.div variants={itemVariants}>
             <KpiCard label="Overtime" value={(weekly?.overtimeHours || 0).toFixed(2)} />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <KpiCard label="Night Differential" value={(weekly?.nightDiffHours || 0).toFixed(2)} />
           </motion.div>
           <motion.div variants={itemVariants}>
             <KpiCard label="Late" value={formatDurationMinutes(weekly?.lateMinutes)} />
