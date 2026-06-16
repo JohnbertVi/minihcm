@@ -1,0 +1,11 @@
+{
+  "name": "mini-hcm-time-tracking",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev:front": "npm --prefix front run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "build": "npm --prefix front run build",
+    "start": "npm --prefix backend start"
+  }
+}
