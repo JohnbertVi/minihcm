@@ -150,43 +150,6 @@ Admin reports should include:
 - Undertime minutes
 - Total worked hours
 
-## Recommended Firestore Collections
-
-```txt
-users/{userId}
-attendance/{attendanceId}
-dailySummary/{summaryId}
-```
-
-Weekly reports can be computed by querying `dailySummary` records from Monday to Sunday. A separate `weeklySummary` collection is optional.
-
-## Recommended API Routes
-
-### Employee Routes
-
-```txt
-POST /api/punch/in
-POST /api/punch/out
-GET  /api/attendance/me
-GET  /api/summary/me/daily
-GET  /api/summary/me/weekly
-```
-
-### Admin Routes
-
-```txt
-GET   /api/admin/users
-GET   /api/admin/attendance
-PATCH /api/admin/attendance/:id
-GET   /api/admin/reports/daily
-GET   /api/admin/reports/weekly
-```
-
-Admin routes must verify that the authenticated user has:
-
-```js
-role === "admin"
-```
 
 ## Expected Output
 
@@ -201,17 +164,3 @@ A working mini HCM system that demonstrates:
 - Admin attendance management
 - Admin daily and weekly reports
 
-## Recommended Build Order
-
-1. Set up Firebase Authentication and Firestore.
-2. Build register and login pages.
-3. Store user profiles with role, timezone, and schedule.
-4. Build employee punch in and punch out.
-5. Save attendance records in Firestore.
-6. Add backend computation logic.
-7. Save computed daily summaries.
-8. Display employee dashboard KPIs.
-9. Display employee attendance history.
-10. Build admin attendance view.
-11. Add admin punch editing and summary recomputation.
-12. Build daily and weekly reports.
