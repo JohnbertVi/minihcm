@@ -1,6 +1,22 @@
 import { useEffect, useState } from "react";
-import api from "../services/api.js";
-import { formatTimestamp, timestampToInput, todayIso } from "../utils/format.js";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import EmptyState from "@/components/EmptyState.jsx";
+import PageHeader from "@/components/PageHeader.jsx";
+import api from "@/services/api.js";
+import { getErrorMessage, notify } from "@/utils/feedback.js";
+import { formatTimestamp, timestampToInput, todayIso } from "@/utils/format.js";
+import { Loader2, Pencil } from "lucide-react";
 
 function localInputToIso(value) {
   return value ? new Date(value).toISOString() : null;
@@ -10,7 +26,7 @@ export default function AdminAttendancePage() {
   const [date, setDate] = useState(todayIso());
   const [records, setRecords] = useState([]);
   const [editing, setEditing] = useState(null);
-  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
 
   async function loadRecords() {
     const { data } = await api.get("/admin/attendance", { params: { date } });
@@ -29,7 +45,7 @@ export default function AdminAttendancePage() {
         }
       } catch (err) {
         if (active) {
-          setMessage(err.response?.data?.message || err.message);
+          notify.error(getErrorMessage(err));
         }
       }
     }
@@ -43,7 +59,7 @@ export default function AdminAttendancePage() {
 
   async function saveEdit(event) {
     event.preventDefault();
-    setMessage("");
+    setSaving(true);
 
     try {
       await api.patch(`/admin/attendance/${editing.id}`, {
@@ -52,117 +68,139 @@ export default function AdminAttendancePage() {
       });
       setEditing(null);
       await loadRecords();
-      setMessage("Attendance updated and daily summary recomputed.");
+      notify.success("Attendance updated and summary recomputed.");
     } catch (err) {
-      setMessage(err.response?.data?.message || err.message);
+      notify.error(getErrorMessage(err));
+    } finally {
+      setSaving(false);
     }
   }
 
   return (
-    <section className="space-y-4">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold text-slate-950">Admin Attendance</h2>
-          <p className="mt-1 text-slate-600">View employee punches and correct records when needed.</p>
-        </div>
-        <label className="text-sm font-medium text-slate-700">
-          Date
-          <input
-            className="mt-1 block rounded-md border border-slate-300 px-3 py-2"
-            onChange={(event) => setDate(event.target.value)}
-            type="date"
-            value={date}
-          />
-        </label>
-      </div>
-
-      {message && <p className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">{message}</p>}
-
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="bg-slate-100 text-slate-600">
-            <tr>
-              <th className="px-4 py-3">Employee</th>
-              <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Punch In</th>
-              <th className="px-4 py-3">Punch Out</th>
-              <th className="px-4 py-3">Edited</th>
-              <th className="px-4 py-3">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-200">
-            {records.map((record) => (
-              <tr key={record.id}>
-                <td className="px-4 py-3 font-medium text-slate-900">{record.employeeName || record.email}</td>
-                <td className="px-4 py-3 text-slate-600">{record.date}</td>
-                <td className="px-4 py-3 text-slate-600">{formatTimestamp(record.punchIn)}</td>
-                <td className="px-4 py-3 text-slate-600">{formatTimestamp(record.punchOut)}</td>
-                <td className="px-4 py-3 text-slate-600">{record.editedByAdmin ? "Yes" : "No"}</td>
-                <td className="px-4 py-3">
-                  <button
-                    className="rounded-md border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100"
-                    onClick={() =>
-                      setEditing({
-                        ...record,
-                        punchInInput: timestampToInput(record.punchIn),
-                        punchOutInput: timestampToInput(record.punchOut),
-                      })
-                    }
-                    type="button"
-                  >
-                    Edit
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {!records.length && (
-              <tr>
-                <td className="px-4 py-6 text-center text-slate-500" colSpan={6}>No records for this date.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {editing && (
-        <form className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm" onSubmit={saveEdit}>
-          <h3 className="text-lg font-semibold text-slate-950">Edit {editing.employeeName || editing.email}</h3>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <label className="text-sm font-medium text-slate-700">
-              Punch In
-              <input
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                onChange={(event) => setEditing({ ...editing, punchInInput: event.target.value })}
-                required
-                type="datetime-local"
-                value={editing.punchInInput}
-              />
-            </label>
-            <label className="text-sm font-medium text-slate-700">
-              Punch Out
-              <input
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
-                onChange={(event) => setEditing({ ...editing, punchOutInput: event.target.value })}
-                required
-                type="datetime-local"
-                value={editing.punchOutInput}
-              />
-            </label>
+    <section className="space-y-6">
+      <PageHeader
+        title="Admin Attendance"
+        description="View employee punches and correct records when needed."
+        meta="Admin tools"
+        actions={
+          <div className="space-y-1.5">
+            <Label htmlFor="date">Date</Label>
+            <Input
+              id="date"
+              type="date"
+              value={date}
+              onChange={(event) => setDate(event.target.value)}
+              className="w-auto"
+            />
           </div>
-          <div className="mt-4 flex gap-2">
-            <button className="rounded-md bg-slate-950 px-4 py-2 font-semibold text-white" type="submit">
-              Save
-            </button>
-            <button
-              className="rounded-md border border-slate-300 px-4 py-2 font-semibold text-slate-700"
-              onClick={() => setEditing(null)}
-              type="button"
-            >
-              Cancel
-            </button>
+        }
+      />
+
+      <Card className="overflow-hidden border-emerald-100 bg-white shadow-sm">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[900px] text-left text-sm">
+              <thead className="bg-emerald-50/80 text-xs uppercase text-emerald-800/70">
+                <tr>
+                  <th className="px-4 py-3">Employee</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Punch In</th>
+                  <th className="px-4 py-3">Punch Out</th>
+                  <th className="px-4 py-3">Edited</th>
+                  <th className="px-4 py-3">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-emerald-100">
+                {records.map((record) => (
+                  <tr className="transition hover:bg-emerald-50/40" key={record.id}>
+                    <td className="px-4 py-3 font-medium text-emerald-950">
+                      {record.employeeName || record.email}
+                    </td>
+                    <td className="px-4 py-3 text-emerald-800/70">{record.date}</td>
+                    <td className="px-4 py-3 text-emerald-800/70">{formatTimestamp(record.punchIn)}</td>
+                    <td className="px-4 py-3 text-emerald-800/70">{formatTimestamp(record.punchOut)}</td>
+                    <td className="px-4 py-3 text-emerald-800/70">{record.editedByAdmin ? "Yes" : "No"}</td>
+                    <td className="px-4 py-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
+                        onClick={() =>
+                          setEditing({
+                            ...record,
+                            punchInInput: timestampToInput(record.punchIn),
+                            punchOutInput: timestampToInput(record.punchOut),
+                          })
+                        }
+                      >
+                        <Pencil className="mr-1.5 h-3.5 w-3.5" />
+                        Edit
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+                {!records.length && (
+                  <EmptyState colSpan={6} title="No records for this date" description="Completed punch records will appear here." />
+                )}
+              </tbody>
+            </table>
           </div>
-        </form>
-      )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <form onSubmit={saveEdit}>
+            <DialogHeader>
+              <DialogTitle>Edit {editing?.employeeName || editing?.email}</DialogTitle>
+              <DialogDescription>Saving recalculates the matching daily summary.</DialogDescription>
+            </DialogHeader>
+
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="punchIn">Punch In</Label>
+                <Input
+                  id="punchIn"
+                  type="datetime-local"
+                  required
+                  value={editing?.punchInInput || ""}
+                  onChange={(event) =>
+                    setEditing((prev) => (prev ? { ...prev, punchInInput: event.target.value } : prev))
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="punchOut">Punch Out</Label>
+                <Input
+                  id="punchOut"
+                  type="datetime-local"
+                  required
+                  value={editing?.punchOutInput || ""}
+                  onChange={(event) =>
+                    setEditing((prev) => (prev ? { ...prev, punchOutInput: event.target.value } : prev))
+                  }
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="mt-6 gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setEditing(null)} disabled={saving}>
+                Cancel
+              </Button>
+              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving…
+                  </>
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

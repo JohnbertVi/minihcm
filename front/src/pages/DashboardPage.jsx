@@ -1,12 +1,32 @@
 import { useEffect, useState } from "react";
-import KpiCard from "../components/KpiCard.jsx";
-import api from "../services/api.js";
+import { motion } from "framer-motion";
+import { LogIn, LogOut, Loader2 } from "lucide-react";
+import KpiCard from "@/components/KpiCard.jsx";
+import PageHeader from "@/components/PageHeader.jsx";
+import ConfirmDialog from "@/components/ConfirmDialog.jsx";
+import { Button } from "@/components/ui/button";
+import api from "@/services/api.js";
+import { getErrorMessage, notify } from "@/utils/feedback.js";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.08 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 16 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+};
 
 export default function DashboardPage() {
   const [summary, setSummary] = useState(null);
   const [weekly, setWeekly] = useState(null);
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
 
   async function loadData() {
     const [dailyRes, weeklyRes] = await Promise.all([
@@ -33,7 +53,7 @@ export default function DashboardPage() {
         }
       } catch {
         if (active) {
-          setMessage("Connect Firebase credentials to load attendance data.");
+          notify.error("Could not load dashboard data. Check the backend server.");
         }
       }
     }
@@ -45,68 +65,131 @@ export default function DashboardPage() {
     };
   }, []);
 
-  async function handlePunch(path) {
+  function requestPunch(path) {
+    setPendingAction(path);
+    if (path.endsWith("/out")) {
+      setConfirmOpen(true);
+    } else {
+      executePunch(path);
+    }
+  }
+
+  async function executePunch(path) {
     setLoading(true);
-    setMessage("");
+    setConfirmOpen(false);
 
     try {
       await api.post(path);
       await loadData();
-      setMessage(path.endsWith("/in") ? "Punch in recorded." : "Punch out recorded and daily summary computed.");
+      notify.success(path.endsWith("/in") ? "Punch in recorded." : "Punch out recorded and summary computed.");
     } catch (err) {
-      setMessage(err.response?.data?.message || err.message);
+      notify.error(getErrorMessage(err));
     } finally {
       setLoading(false);
+      setPendingAction(null);
     }
   }
 
   return (
-    <section className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <section className="space-y-8">
+      <PageHeader
+        title="Employee Dashboard"
+        description="Record attendance and review today's computed totals."
+        meta="Workspace"
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              onClick={() => requestPunch("/punch/in")}
+              disabled={loading}
+              className="bg-emerald-600 hover:bg-emerald-700"
+            >
+              {loading && pendingAction === "/punch/in" ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <LogIn className="mr-2 h-4 w-4" />
+              )}
+              Punch In
+            </Button>
+            <Button
+              onClick={() => requestPunch("/punch/out")}
+              disabled={loading}
+              variant="outline"
+              className="border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
+            >
+              {loading && pendingAction === "/punch/out" ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <LogOut className="mr-2 h-4 w-4" />
+              )}
+              Punch Out
+            </Button>
+          </div>
+        }
+      />
+
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+      >
+        <motion.div variants={itemVariants}>
+          <KpiCard label="Regular Hours" value={summary?.regularHours ?? "0.00"} tone="good" />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <KpiCard label="Overtime Hours" value={summary?.overtimeHours ?? "0.00"} tone="info" />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <KpiCard label="Night Differential" value={summary?.nightDiffHours ?? "0.00"} />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <KpiCard label="Late Minutes" value={summary?.lateMinutes ?? 0} tone="warn" />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <KpiCard label="Undertime Minutes" value={summary?.undertimeMinutes ?? 0} tone="warn" />
+        </motion.div>
+        <motion.div variants={itemVariants}>
+          <KpiCard label="Total Worked" value={summary?.totalWorkedHours ?? "0.00"} />
+        </motion.div>
+      </motion.div>
+
+      <div className="space-y-3">
         <div>
-          <h2 className="text-2xl font-semibold text-slate-950">Employee Dashboard</h2>
-          <p className="mt-1 text-slate-600">Record attendance and review today's computed totals.</p>
+          <h3 className="text-lg font-semibold text-emerald-950">This Week</h3>
+          <p className="text-sm text-emerald-700/80">Totals generated from completed daily summaries.</p>
         </div>
-        <div className="flex gap-2">
-          <button
-            className="rounded-md bg-emerald-600 px-4 py-2 font-semibold text-white hover:bg-emerald-700"
-            disabled={loading}
-            onClick={() => handlePunch("/punch/in")}
-            type="button"
-          >
-            Punch In
-          </button>
-          <button
-            className="rounded-md bg-slate-950 px-4 py-2 font-semibold text-white hover:bg-slate-800"
-            disabled={loading}
-            onClick={() => handlePunch("/punch/out")}
-            type="button"
-          >
-            Punch Out
-          </button>
-        </div>
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
+        >
+          <motion.div variants={itemVariants}>
+            <KpiCard label="Regular" value={(weekly?.regularHours || 0).toFixed(2)} />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <KpiCard label="Overtime" value={(weekly?.overtimeHours || 0).toFixed(2)} />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <KpiCard label="Late" value={`${weekly?.lateMinutes || 0} min`} />
+          </motion.div>
+          <motion.div variants={itemVariants}>
+            <KpiCard label="Undertime" value={`${weekly?.undertimeMinutes || 0} min`} />
+          </motion.div>
+        </motion.div>
       </div>
 
-      {message && <p className="rounded-md border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">{message}</p>}
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <KpiCard label="Regular Hours" value={summary?.regularHours ?? "0.00"} tone="good" />
-        <KpiCard label="Overtime Hours" value={summary?.overtimeHours ?? "0.00"} tone="info" />
-        <KpiCard label="Night Differential" value={summary?.nightDiffHours ?? "0.00"} />
-        <KpiCard label="Late Minutes" value={summary?.lateMinutes ?? 0} tone="warn" />
-        <KpiCard label="Undertime Minutes" value={summary?.undertimeMinutes ?? 0} tone="warn" />
-        <KpiCard label="Total Worked" value={summary?.totalWorkedHours ?? "0.00"} />
-      </div>
-
-      <div>
-        <h3 className="mb-3 text-lg font-semibold text-slate-950">This Week</h3>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <KpiCard label="Regular" value={(weekly?.regularHours || 0).toFixed(2)} />
-          <KpiCard label="Overtime" value={(weekly?.overtimeHours || 0).toFixed(2)} />
-          <KpiCard label="Late" value={`${weekly?.lateMinutes || 0} min`} />
-          <KpiCard label="Undertime" value={`${weekly?.undertimeMinutes || 0} min`} />
-        </div>
-      </div>
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Confirm Punch Out"
+        description="Are you sure you want to record your punch out? This will compute today's attendance summary."
+        confirmLabel="Punch Out"
+        cancelLabel="Cancel"
+        variant="default"
+        onConfirm={() => executePunch("/punch/out")}
+        loading={loading}
+      />
     </section>
   );
 }

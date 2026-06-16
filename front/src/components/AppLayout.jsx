@@ -1,67 +1,194 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth.js";
-import { logout } from "../services/authService.js";
+import { useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  History,
+  ShieldCheck,
+  BarChart3,
+  LogOut,
+} from "lucide-react";
+import { useAuth } from "@/hooks/useAuth.js";
+import { logout } from "@/services/authService.js";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import ConfirmDialog from "@/components/ConfirmDialog.jsx";
 
-function navClass({ isActive }) {
-  return [
-    "rounded-md px-3 py-2 text-sm font-medium transition",
-    isActive ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950",
-  ].join(" ");
+function getInitials(name) {
+  if (!name) return "U";
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
+function SidebarNavLink({ to, icon: Icon, children }) {
+  const location = useLocation();
+  const isActive = location.pathname === to || location.pathname.startsWith(`${to}/`);
+
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton asChild isActive={isActive} tooltip={children}>
+        <NavLink to={to}>
+          <Icon className="size-4" />
+          <span>{children}</span>
+        </NavLink>
+      </SidebarMenuButton>
+    </SidebarMenuItem>
+  );
 }
 
 export default function AppLayout() {
   const { profile, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   async function handleLogout() {
-    await logout();
-    navigate("/login");
+    setLoggingOut(true);
+    try {
+      await logout();
+      navigate("/login");
+    } catch {
+      setLoggingOut(false);
+    }
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase text-slate-500">Mini Time Tracking</p>
-            <h1 className="text-xl font-semibold text-slate-950">Attendance</h1>
-          </div>
-          <nav className="flex flex-wrap items-center gap-2">
-            <NavLink className={navClass} to="/dashboard">
-              Dashboard
-            </NavLink>
-            <NavLink className={navClass} to="/history">
-              History
-            </NavLink>
-            {isAdmin && (
-              <NavLink className={navClass} to="/admin">
-                Admin
-              </NavLink>
-            )}
-            {isAdmin && (
-              <NavLink className={navClass} to="/admin/reports">
-                Reports
-              </NavLink>
-            )}
-          </nav>
-          <div className="flex items-center gap-3">
-            <div className="text-right text-sm">
-              <p className="font-medium text-slate-900">{profile?.name || "Employee"}</p>
-              <p className="text-slate-500">{profile?.role || "employee"}</p>
+    <SidebarProvider>
+      <Sidebar collapsible="icon" variant="sidebar" className="border-r border-emerald-100">
+        <SidebarHeader>
+          <div className="flex items-center gap-2 px-2 py-3">
+            <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg bg-emerald-600 p-1">
+              <img
+                src="/logo.png"
+                alt="Mini Time Tracking"
+                className="h-full w-full object-contain"
+              />
             </div>
-            <button
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
-              onClick={handleLogout}
-              type="button"
-            >
-              Logout
-            </button>
+            <div className="grid flex-1 leading-tight group-data-[collapsible=icon]:hidden">
+              <span className="text-sm font-semibold text-emerald-950">Mini Time Tracking</span>
+              <span className="text-xs text-emerald-700/80">Attendance</span>
+            </div>
           </div>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        <Outlet />
-      </main>
-    </div>
+        </SidebarHeader>
+
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Employee</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarNavLink to="/dashboard" icon={LayoutDashboard}>
+                  Dashboard
+                </SidebarNavLink>
+                <SidebarNavLink to="/history" icon={History}>
+                  History
+                </SidebarNavLink>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+
+          {isAdmin && (
+            <SidebarGroup>
+              <SidebarGroupLabel>Administration</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarNavLink to="/admin" icon={ShieldCheck}>
+                    Attendance
+                  </SidebarNavLink>
+                  <SidebarNavLink to="/admin/reports" icon={BarChart3}>
+                    Reports
+                  </SidebarNavLink>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          )}
+        </SidebarContent>
+
+        <SidebarFooter>
+          <SidebarGroup>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:justify-center">
+                    <Avatar className="size-8 border border-emerald-100">
+                      <AvatarFallback className="bg-emerald-100 text-emerald-800 text-xs font-semibold">
+                        {getInitials(profile?.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="grid flex-1 leading-tight group-data-[collapsible=icon]:hidden">
+                      <span className="text-sm font-medium text-emerald-950 truncate">
+                        {profile?.name || "Employee"}
+                      </span>
+                      <span className="text-xs text-emerald-700/80 capitalize">
+                        {profile?.role || "employee"}
+                      </span>
+                    </div>
+                  </div>
+                </SidebarMenuItem>
+
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setLogoutOpen(true)}
+                    tooltip="Logout"
+                    className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                  >
+                    <LogOut className="size-4" />
+                    <span>Logout</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarFooter>
+
+        <SidebarRail />
+      </Sidebar>
+
+      <SidebarInset className="bg-gradient-to-br from-emerald-50/60 via-white to-emerald-50/40">
+        <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b border-emerald-100 bg-white/80 px-4 backdrop-blur">
+          <SidebarTrigger className="text-emerald-800 hover:bg-emerald-50" />
+          <Separator orientation="vertical" className="h-6 bg-emerald-100" />
+          <div className="flex-1">
+            <h1 className="text-lg font-semibold text-emerald-950">
+              {isAdmin ? "Admin Workspace" : "Employee Workspace"}
+            </h1>
+          </div>
+        </header>
+
+        <main className="mx-auto w-full max-w-7xl p-4 sm:p-6 lg:p-8">
+          <Outlet />
+        </main>
+      </SidebarInset>
+
+      <ConfirmDialog
+        open={logoutOpen}
+        onOpenChange={setLogoutOpen}
+        title="Logout"
+        description="Are you sure you want to sign out of your account?"
+        confirmLabel="Logout"
+        cancelLabel="Cancel"
+        variant="destructive"
+        onConfirm={handleLogout}
+        loading={loggingOut}
+      />
+    </SidebarProvider>
   );
 }

@@ -77,14 +77,11 @@ export async function myWeeklySummary(req, res, next) {
     const weekStart = req.query.weekStart || DateTime.now().setZone(timezone).startOf("week").toISODate();
     const weekEnd = DateTime.fromISO(weekStart, { zone: timezone }).plus({ days: 6 }).toISODate();
 
-    const snap = await db
-      .collection("dailySummary")
-      .where("userId", "==", req.user.uid)
-      .where("date", ">=", weekStart)
-      .where("date", "<=", weekEnd)
-      .get();
-
-    const summaries = snap.docs.map(serializeDoc).sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const snap = await db.collection("dailySummary").where("userId", "==", req.user.uid).get();
+    const summaries = snap.docs
+      .map(serializeDoc)
+      .filter((item) => item.date >= weekStart && item.date <= weekEnd)
+      .sort((a, b) => String(a.date).localeCompare(String(b.date)));
     const totals = summaries.reduce(
       (acc, item) => ({
         totalWorkedHours: acc.totalWorkedHours + (item.totalWorkedHours || 0),
@@ -177,13 +174,12 @@ export async function adminWeeklyReports(req, res, next) {
   try {
     const weekStart = req.query.weekStart || DateTime.now().setZone("Asia/Manila").startOf("week").toISODate();
     const weekEnd = DateTime.fromISO(weekStart).plus({ days: 6 }).toISODate();
-    const snap = await db
-      .collection("dailySummary")
-      .where("date", ">=", weekStart)
-      .where("date", "<=", weekEnd)
-      .get();
+    const snap = await db.collection("dailySummary").get();
 
-    const grouped = snap.docs.map(serializeDoc).reduce((acc, report) => {
+    const grouped = snap.docs
+      .map(serializeDoc)
+      .filter((report) => report.date >= weekStart && report.date <= weekEnd)
+      .reduce((acc, report) => {
       const key = report.userId;
       const current = acc.get(key) || {
         id: key,

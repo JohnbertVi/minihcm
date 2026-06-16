@@ -1,15 +1,22 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
+
 export default function KpiCard({ label, value, tone = "default" }) {
   const tones = {
-    default: "border-slate-200 bg-white",
-    good: "border-emerald-200 bg-emerald-50",
-    warn: "border-amber-200 bg-amber-50",
-    info: "border-sky-200 bg-sky-50",
+    default: "border-emerald-100 bg-white text-emerald-950",
+    good: "border-emerald-200 bg-emerald-50/80 text-emerald-950",
+    warn: "border-amber-200 bg-amber-50/80 text-amber-950",
+    info: "border-sky-200 bg-sky-50/80 text-sky-950",
   };
 
   return (
-    <div className={`rounded-lg border p-4 shadow-sm ${tones[tone]}`}>
-      <p className="text-sm font-medium text-slate-500">{label}</p>
-      <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
-    </div>
+    <Card className={cn("shadow-sm transition hover:-translate-y-0.5 hover:shadow-md", tones[tone])}>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-emerald-700/80">{label}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-3xl font-semibold">{value}</p>
+      </CardContent>
+    </Card>
   );
 }
