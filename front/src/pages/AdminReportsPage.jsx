@@ -1,8 +1,14 @@
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Select,
   SelectContent,
@@ -17,6 +23,7 @@ import PageHeader from "@/components/PageHeader.jsx";
 import api from "@/services/api.js";
 import { getErrorMessage, notify } from "@/utils/feedback.js";
 import { formatDurationMinutes, todayIso } from "@/utils/format.js";
+import { Clock } from "lucide-react";
 
 function weekStartIso() {
   const date = new Date();
@@ -81,7 +88,7 @@ export default function AdminReportsPage() {
     <section className="min-w-0 space-y-6">
       <PageHeader
         title="Admin Reports"
-        description="Daily and weekly summaries generated from employee punch records."
+        description="Regular hours are counted only within each employee's assigned schedule."
         meta="Reporting"
         actions={
           <div className="grid w-full gap-3 sm:flex sm:w-auto sm:flex-wrap sm:items-end">
@@ -129,11 +136,11 @@ export default function AdminReportsPage() {
         <KpiSkeletonGrid count={5} className="lg:grid-cols-5" />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <KpiCard label="Records" value={totals.present} tone="good" />
-        <KpiCard label="Late Employees" value={totals.late} tone="warn" />
-        <KpiCard label="Overtime Hours" value={totals.overtimeHours.toFixed(2)} tone="info" />
-        <KpiCard label="Night Differential" value={totals.nightDiffHours.toFixed(2)} />
-        <KpiCard label="Undertime" value={formatDurationMinutes(totals.undertimeMinutes)} />
+          <KpiCard label="Records" value={totals.present} tone="good" />
+          <KpiCard label="Late Employees" value={totals.late} tone="warn" />
+          <KpiCard label="Overtime Hours" value={totals.overtimeHours.toFixed(2)} tone="info" />
+          <KpiCard label="Night Differential" value={totals.nightDiffHours.toFixed(2)} />
+          <KpiCard label="Undertime" value={formatDurationMinutes(totals.undertimeMinutes)} />
         </div>
       )}
 
@@ -153,13 +160,14 @@ export default function AdminReportsPage() {
         {!loading && reports.map((report) => (
           <Card className="border-emerald-100 bg-white shadow-sm" key={report.id}>
             <CardContent className="space-y-4 p-4">
-              <div>
-                <p className="text-sm font-semibold text-emerald-950">
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-emerald-950">
                   {report.employeeName || report.userId}
                 </p>
                 <p className="text-xs text-emerald-800/70">
                   {mode === "daily" ? report.date : `${report.weekStart} to ${report.weekEnd}`}
                 </p>
+                <ScheduleBadge schedule={report.schedule} />
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <ReportMetric label="Regular" value={Number(report.regularHours || 0).toFixed(2)} />
@@ -192,7 +200,14 @@ export default function AdminReportsPage() {
                 <tr>
                   <th className="px-4 py-3">Employee</th>
                   <th className="px-4 py-3">{mode === "daily" ? "Date" : "Week"}</th>
-                  <th className="px-4 py-3">Regular</th>
+                  <th className="px-4 py-3">
+                    <Tooltip>
+                      <TooltipTrigger className="cursor-help underline decoration-dotted decoration-emerald-700/40">Regular</TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p>Hours worked within the employee's assigned schedule.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </th>
                   <th className="px-4 py-3">Overtime</th>
                   <th className="px-4 py-3">Night Differential</th>
                   <th className="px-4 py-3">Late</th>
@@ -206,6 +221,7 @@ export default function AdminReportsPage() {
                   <tr className="transition hover:bg-emerald-50/40" key={report.id}>
                     <td className="px-4 py-3">
                       <p className="truncate font-medium text-emerald-950">{report.employeeName || report.userId}</p>
+                      <ScheduleBadge schedule={report.schedule} />
                     </td>
                     <td className="px-4 py-3 text-emerald-800/70">
                       <span className="break-words">{mode === "daily" ? report.date : `${report.weekStart} to ${report.weekEnd}`}</span>
@@ -248,5 +264,17 @@ function ReportMetric({ label, value }) {
       <p className="text-xs font-medium text-emerald-700/80">{label}</p>
       <p className="mt-1 break-words font-semibold text-emerald-950">{value}</p>
     </div>
+  );
+}
+
+function ScheduleBadge({ schedule }) {
+  const start = schedule?.start || "09:00";
+  const end = schedule?.end || "18:00";
+
+  return (
+    <Badge variant="outline" className="mt-1 gap-1 border-emerald-200 bg-white px-1.5 py-0 text-[10px] font-medium text-emerald-800">
+      <Clock className="h-3 w-3" />
+      {start} - {end}
+    </Badge>
   );
 }
