@@ -92,9 +92,14 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  overflow-x: hidden;
   background:
     linear-gradient(180deg, rgba(236, 253, 245, 0.55), rgba(245, 247, 251, 0) 260px),
     #f5f7fb;
+}
+
+#root {
+  overflow-x: hidden;
 }
 
 button,

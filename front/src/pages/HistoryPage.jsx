@@ -62,7 +62,7 @@ export default function HistoryPage() {
   }, []);
 
   return (
-    <section className="space-y-4">
+    <section className="min-w-0 space-y-4">
       <PageHeader
         title="Attendance History"
         description="Recent punch records with completed summaries and exception time."
@@ -133,7 +133,7 @@ export default function HistoryPage() {
                 {loading && <TableSkeletonRows columns={9} rows={6} />}
                 {!loading && records.map((record) => (
                   <tr className="transition hover:bg-emerald-50/40" key={record.id}>
-                    <td className="px-4 py-3 font-medium text-emerald-950">{record.date}</td>
+                    <td className="px-4 py-3 text-emerald-800/70">{record.date}</td>
                     <td className="px-4 py-3 text-emerald-800/70">{formatTimestamp(record.punchIn)}</td>
                     <td className="px-4 py-3 text-emerald-800/70">{formatTimestamp(record.punchOut)}</td>
                     <td className="px-4 py-3 font-medium text-emerald-950">{getWorkedTime(record)}</td>

@@ -78,7 +78,7 @@ export default function AdminReportsPage() {
   );
 
   return (
-    <section className="space-y-6">
+    <section className="min-w-0 space-y-6">
       <PageHeader
         title="Admin Reports"
         description="Daily and weekly summaries generated from employee punch records."
@@ -128,13 +128,13 @@ export default function AdminReportsPage() {
       {loading ? (
         <KpiSkeletonGrid count={5} className="lg:grid-cols-5" />
       ) : (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <KpiCard label="Records" value={totals.present} tone="good" />
         <KpiCard label="Late Employees" value={totals.late} tone="warn" />
         <KpiCard label="Overtime Hours" value={totals.overtimeHours.toFixed(2)} tone="info" />
         <KpiCard label="Night Differential" value={totals.nightDiffHours.toFixed(2)} />
         <KpiCard label="Undertime" value={formatDurationMinutes(totals.undertimeMinutes)} />
-      </div>
+        </div>
       )}
 
       <div className="space-y-3 md:hidden">
@@ -204,11 +204,11 @@ export default function AdminReportsPage() {
                 {loading && <TableSkeletonRows columns={8} rows={6} />}
                 {!loading && reports.map((report) => (
                   <tr className="transition hover:bg-emerald-50/40" key={report.id}>
-                    <td className="px-4 py-3 font-medium text-emerald-950">
-                      {report.employeeName || report.userId}
+                    <td className="px-4 py-3">
+                      <p className="truncate font-medium text-emerald-950">{report.employeeName || report.userId}</p>
                     </td>
                     <td className="px-4 py-3 text-emerald-800/70">
-                      {mode === "daily" ? report.date : `${report.weekStart} to ${report.weekEnd}`}
+                      <span className="break-words">{mode === "daily" ? report.date : `${report.weekStart} to ${report.weekEnd}`}</span>
                     </td>
                     <td className="px-4 py-3 text-emerald-800/70">
                       {Number(report.regularHours || 0).toFixed(2)}

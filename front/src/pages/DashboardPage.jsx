@@ -76,7 +76,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <section className="space-y-8">
+    <section className="min-w-0 space-y-8">
       <PageHeader
         title="Employee Dashboard"
         description="Review today's attendance summary and weekly totals."

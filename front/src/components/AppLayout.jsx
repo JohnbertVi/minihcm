@@ -113,7 +113,7 @@ export default function AppLayout() {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider className="overflow-x-hidden">
       <Sidebar collapsible="icon" variant="sidebar" className="border-r border-slate-200/80 bg-white">
         <SidebarHeader className="border-b border-slate-100">
           <div className="flex items-center gap-2 px-2 py-3 group-data-[collapsible=icon]:justify-center">
@@ -213,8 +213,8 @@ export default function AppLayout() {
         <SidebarRail />
       </Sidebar>
 
-      <SidebarInset className="bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
-        <header className="sticky top-0 z-10 flex h-14 items-center gap-3 border-b border-slate-200/80 bg-white/90 px-3 backdrop-blur sm:px-4 md:h-16">
+      <SidebarInset className="min-w-0 overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-emerald-50/30">
+        <header className="sticky top-0 z-10 flex h-14 min-w-0 items-center gap-3 border-b border-slate-200/80 bg-white/90 px-3 backdrop-blur sm:px-4 md:h-16">
           <SidebarTrigger className="size-8 text-slate-700 hover:bg-slate-100 md:hidden" />
           <div className="flex-1">
             <h1 className="text-base font-semibold text-slate-950 sm:text-lg">
@@ -224,7 +224,7 @@ export default function AppLayout() {
           <DigitalClock />
         </header>
 
-        <main className="mx-auto w-full max-w-7xl p-3 pb-28 sm:p-5 sm:pb-28 lg:p-8 lg:pb-28">
+        <main className="mx-auto w-full min-w-0 max-w-7xl p-3 pb-28 sm:p-5 sm:pb-28 lg:p-8 lg:pb-28">
           <Outlet />
         </main>
       </SidebarInset>

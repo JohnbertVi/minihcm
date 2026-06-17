@@ -15,7 +15,7 @@ export default function KpiCard({ label, value, tone = "default" }) {
         <CardTitle className="text-xs font-medium leading-5 text-emerald-700/80 sm:text-sm">{label}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-semibold tabular-nums sm:text-3xl">{value}</p>
+        <p className="break-words text-2xl font-semibold tabular-nums sm:text-3xl">{value}</p>
       </CardContent>
     </Card>
   );

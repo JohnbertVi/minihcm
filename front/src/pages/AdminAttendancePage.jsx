@@ -1,10 +1,17 @@
 import { useEffect, useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import ConfirmDialog from "@/components/ConfirmDialog.jsx";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
@@ -23,6 +30,32 @@ import { Clock3, Pencil, ShieldCheck, UserRound } from "lucide-react";
 
 function localInputToIso(value) {
   return value ? new Date(value).toISOString() : null;
+}
+
+function recordMillis(record, field) {
+  const value = record?.[field];
+  if (!value) return null;
+  if (typeof value.toMillis === "function") return value.toMillis();
+  if (typeof value.toDate === "function") return value.toDate().getTime();
+  if (value._seconds) return value._seconds * 1000;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function latestRecordMillis(record) {
+  return Math.max(
+    recordMillis(record, "createdAt") || 0,
+    recordMillis(record, "updatedAt") || 0,
+    recordMillis(record, "punchIn") || 0,
+    recordMillis(record, "punchOut") || 0,
+  );
+}
+
+function isNewRecord(record) {
+  const created = recordMillis(record, "createdAt");
+  if (!created) return false;
+  const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+  return created >= oneDayAgo;
 }
 
 function buildEditingRecord(record) {
@@ -63,7 +96,14 @@ export default function AdminAttendancePage() {
 
   async function loadRecords() {
     const { data } = await api.get("/admin/attendance", { params: { date } });
-    setRecords(Array.isArray(data.records) ? data.records : []);
+    const raw = Array.isArray(data.records) ? data.records : [];
+    setRecords(
+      raw.sort((a, b) => {
+        const dateCompare = String(b.date || "").localeCompare(String(a.date || ""));
+        if (dateCompare !== 0) return dateCompare;
+        return latestRecordMillis(b) - latestRecordMillis(a);
+      }),
+    );
   }
 
   useEffect(() => {
@@ -76,7 +116,14 @@ export default function AdminAttendancePage() {
         const { data } = await api.get("/admin/attendance", { params: { date } });
 
         if (active) {
-          setRecords(Array.isArray(data.records) ? data.records : []);
+          const raw = Array.isArray(data.records) ? data.records : [];
+          setRecords(
+            raw.sort((a, b) => {
+              const dateCompare = String(b.date || "").localeCompare(String(a.date || ""));
+              if (dateCompare !== 0) return dateCompare;
+              return latestRecordMillis(b) - latestRecordMillis(a);
+            }),
+          );
         }
       } catch (err) {
         if (active) {
@@ -144,7 +191,8 @@ export default function AdminAttendancePage() {
   }
 
   return (
-    <section className="space-y-6">
+    <TooltipProvider>
+      <section className="min-w-0 space-y-6">
       <PageHeader
         title="Employee Records"
         description="Review attendance history by date, inspect employee punch records, and correct punch times when needed."
@@ -180,26 +228,53 @@ export default function AdminAttendancePage() {
           <Card className="border-emerald-100 bg-white shadow-sm" key={record.id}>
             <CardContent className="space-y-4 p-4">
               <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-emerald-950">
-                    {record.employeeName || record.email}
-                  </p>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    {isNewRecord(record) && (
+                      <Badge className="shrink-0 bg-emerald-100 text-emerald-800">
+                        New
+                      </Badge>
+                    )}
+                    <p className="truncate text-sm font-semibold text-emerald-950">
+                      {record.employeeName || record.email}
+                    </p>
+                  </div>
                   <p className="text-xs text-emerald-800/70">{record.date}</p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
-                  onClick={() => openEditor(record)}
-                >
-                  <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                  Edit
-                </Button>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon-xs"
+                      className="shrink-0 border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
+                      onClick={() => openEditor(record)}
+                      aria-label={`Edit ${record.employeeName || record.email}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Edit record</p>
+                  </TooltipContent>
+                </Tooltip>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <AdminMetric label="Punch In" value={formatTimestamp(record.punchIn)} />
                 <AdminMetric label="Punch Out" value={formatTimestamp(record.punchOut)} />
-                <AdminMetric label="Edited by Admin" value={record.editedByAdmin ? "Yes" : "No"} />
+                <AdminMetric
+                  label="Edited"
+                  value={
+                    <Badge
+                      className={
+                        record.editedByAdmin
+                          ? "bg-rose-100 text-rose-800"
+                          : "bg-emerald-100 text-emerald-800"
+                      }
+                    >
+                      {record.editedByAdmin ? "Yes" : "No"}
+                    </Badge>
+                  }
+                />
               </div>
             </CardContent>
           </Card>
@@ -225,30 +300,59 @@ export default function AdminAttendancePage() {
                   <th className="px-4 py-3">Punch In</th>
                   <th className="px-4 py-3">Punch Out</th>
                   <th className="px-4 py-3">Edited</th>
-                  <th className="px-4 py-3">Action</th>
+                  <th className="px-4 py-3 text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-emerald-100">
                 {loading && <TableSkeletonRows columns={6} rows={6} />}
                 {!loading && records.map((record) => (
-                  <tr className="transition hover:bg-emerald-50/40" key={record.id}>
-                    <td className="px-4 py-3 font-medium text-emerald-950">
-                      {record.employeeName || record.email}
+                  <tr className="transition hover:bg-emerald-50/60" key={record.id}>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        {isNewRecord(record) && (
+                          <Badge className="shrink-0 bg-emerald-100 text-emerald-800">
+                            New
+                          </Badge>
+                        )}
+                        <span className="font-medium text-emerald-950">
+                          {record.employeeName || record.email}
+                        </span>
+                      </div>
+                      {record.email && record.employeeName && (
+                        <p className="truncate text-xs text-emerald-800/70">{record.email}</p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-emerald-800/70">{record.date}</td>
                     <td className="px-4 py-3 text-emerald-800/70">{formatTimestamp(record.punchIn)}</td>
                     <td className="px-4 py-3 text-emerald-800/70">{formatTimestamp(record.punchOut)}</td>
-                    <td className="px-4 py-3 text-emerald-800/70">{record.editedByAdmin ? "Yes" : "No"}</td>
                     <td className="px-4 py-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
-                        onClick={() => openEditor(record)}
+                      <Badge
+                        className={
+                          record.editedByAdmin
+                            ? "bg-rose-100 text-rose-800"
+                            : "bg-emerald-100 text-emerald-800"
+                        }
                       >
-                        <Pencil className="mr-1.5 h-3.5 w-3.5" />
-                        Edit
-                      </Button>
+                        {record.editedByAdmin ? "Yes" : "No"}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon-xs"
+                            className="border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
+                            onClick={() => openEditor(record)}
+                            aria-label={`Edit ${record.employeeName || record.email}`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Edit record</p>
+                        </TooltipContent>
+                      </Tooltip>
                     </td>
                   </tr>
                 ))}
@@ -359,6 +463,7 @@ export default function AdminAttendancePage() {
         loading={saving}
       />
     </section>
+    </TooltipProvider>
   );
 }
 
@@ -366,7 +471,9 @@ function AdminMetric({ label, value }) {
   return (
     <div className="rounded-md border border-emerald-100 bg-emerald-50/40 p-3">
       <p className="text-xs font-medium text-emerald-700/80">{label}</p>
-      <p className="mt-1 break-words font-semibold text-emerald-950">{value}</p>
+      <div className="mt-1 break-words font-semibold text-emerald-950">{value}</div>
     </div>
   );
 }
+
+
