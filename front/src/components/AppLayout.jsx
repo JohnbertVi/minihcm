@@ -27,6 +27,7 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import ConfirmDialog from "@/components/ConfirmDialog.jsx";
 import TimeClockWidget from "@/components/TimeClockWidget.jsx";
@@ -43,9 +44,16 @@ function getInitials(name) {
 
 function SidebarNavLink({ to, icon: Icon, children, end = false }) {
   const location = useLocation();
+  const { isMobile, setOpenMobile } = useSidebar();
   const isActive = end
     ? location.pathname === to
     : location.pathname === to || location.pathname.startsWith(`${to}/`);
+
+  function handleClick() {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  }
 
   return (
     <SidebarMenuItem>
@@ -55,7 +63,7 @@ function SidebarNavLink({ to, icon: Icon, children, end = false }) {
         tooltip={children}
         className="h-10 rounded-lg px-3 text-slate-600 hover:bg-slate-100 hover:text-slate-950 data-[active=true]:bg-emerald-50 data-[active=true]:text-emerald-800 data-[active=true]:shadow-[inset_3px_0_0_#059669]"
       >
-        <NavLink to={to}>
+        <NavLink to={to} onClick={handleClick}>
           <Icon className="size-4" />
           <span>{children}</span>
         </NavLink>
