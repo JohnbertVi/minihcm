@@ -9,8 +9,18 @@ export function AuthProvider({ children }) {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(Boolean(auth));
 
-  async function loadProfile() {
-    const { data } = await api.get("/auth/me");
+  async function loadProfile(user = auth?.currentUser) {
+    if (!user) {
+      setProfile(null);
+      return;
+    }
+
+    const token = await user.getIdToken();
+    const { data } = await api.get("/auth/me", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     setProfile(data.user.profile);
   }
 
@@ -29,7 +39,7 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        await loadProfile();
+        await loadProfile(user);
       } catch {
         setProfile(null);
       } finally {

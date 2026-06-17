@@ -131,7 +131,7 @@ export default function LoginPage() {
               id="password"
               autoComplete="current-password"
               type={showPassword ? "text" : "password"}
-              placeholder="••••••••"
+              placeholder="********"
               value={form.password}
               onChange={(event) => handleChange("password", event.target.value)}
               onBlur={() => handleBlur("password")}
@@ -172,7 +172,7 @@ export default function LoginPage() {
             {submitting ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in…
+                Signing in...
               </>
             ) : (
               "Sign in"

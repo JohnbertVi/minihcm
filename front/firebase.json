@@ -1,0 +1,17 @@
+{
+  "hosting": {
+    "site": "mini-hcm-time-tracking-3886f",
+    "public": "dist",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  }
+}

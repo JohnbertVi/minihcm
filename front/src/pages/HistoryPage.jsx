@@ -29,7 +29,7 @@ export default function HistoryPage() {
         .get("/attendance/me")
         .then(({ data }) => {
           if (active) {
-            setRecords(data.records);
+            setRecords(Array.isArray(data.records) ? data.records : []);
           }
         })
         .catch((err) => {
@@ -47,7 +47,7 @@ export default function HistoryPage() {
     function refreshRecords() {
       api.get("/attendance/me").then(({ data }) => {
         if (active) {
-          setRecords(data.records);
+          setRecords(Array.isArray(data.records) ? data.records : []);
         }
       });
     }

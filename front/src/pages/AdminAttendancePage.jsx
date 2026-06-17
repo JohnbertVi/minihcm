@@ -63,7 +63,7 @@ export default function AdminAttendancePage() {
 
   async function loadRecords() {
     const { data } = await api.get("/admin/attendance", { params: { date } });
-    setRecords(data.records);
+    setRecords(Array.isArray(data.records) ? data.records : []);
   }
 
   useEffect(() => {
@@ -76,7 +76,7 @@ export default function AdminAttendancePage() {
         const { data } = await api.get("/admin/attendance", { params: { date } });
 
         if (active) {
-          setRecords(data.records);
+          setRecords(Array.isArray(data.records) ? data.records : []);
         }
       } catch (err) {
         if (active) {

@@ -45,7 +45,7 @@ export default function AdminReportsPage() {
         const { data } = await api.get(endpoint, { params });
 
         if (active) {
-          setReports(data.reports);
+          setReports(Array.isArray(data.reports) ? data.reports : []);
         }
       } catch (err) {
         if (active) {

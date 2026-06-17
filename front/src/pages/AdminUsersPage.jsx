@@ -56,7 +56,7 @@ export default function AdminUsersPage() {
 
   async function loadUsers() {
     const { data } = await api.get("/admin/users");
-    setUsers(data.users || []);
+    setUsers(Array.isArray(data.users) ? data.users : []);
   }
 
   useEffect(() => {
