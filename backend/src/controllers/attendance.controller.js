@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
 import { db, FieldValue } from "../config/firebase.js";
 import {
+  normalizeProfile,
   parseIsoToTimestamp,
   punchIn,
   punchOut,
@@ -12,6 +13,27 @@ function serializeDoc(doc) {
     id: doc.id,
     ...doc.data(),
   };
+}
+
+function readLimit(value, fallback = 100) {
+  const parsed = Number(value || fallback);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function timestampMillis(value) {
+  if (!value) {
+    return null;
+  }
+
+  if (typeof value.toMillis === "function") {
+    return value.toMillis();
+  }
+
+  if (typeof value.toDate === "function") {
+    return value.toDate().getTime();
+  }
+
+  return null;
 }
 
 export async function punchInHandler(req, res, next) {
@@ -34,7 +56,7 @@ export async function punchOutHandler(req, res, next) {
 
 export async function myAttendance(req, res, next) {
   try {
-    const limit = Number(req.query.limit || 20);
+    const limit = readLimit(req.query.limit, 20);
     const snap = await db
       .collection("attendance")
       .where("userId", "==", req.user.uid)
@@ -109,12 +131,60 @@ export async function adminUsers(req, res, next) {
   }
 }
 
+export async function updateAdminUser(req, res, next) {
+  try {
+    const userRef = db.collection("users").doc(req.params.id);
+    const existingSnap = await userRef.get();
+
+    if (!existingSnap.exists) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const existing = existingSnap.data();
+    const role = req.body.role ?? existing.role;
+
+    if (!["admin", "employee"].includes(role)) {
+      return res.status(400).json({ message: "Role must be admin or employee" });
+    }
+
+    const profile = normalizeProfile({
+      ...existing,
+      name: req.body.name ?? existing.name,
+      role,
+      timezone: req.body.timezone ?? existing.timezone,
+      schedule: {
+        ...(existing.schedule || {}),
+        ...(req.body.schedule || {}),
+      },
+    });
+
+    await userRef.set(
+      {
+        name: profile.name,
+        email: existing.email,
+        role: profile.role,
+        timezone: profile.timezone,
+        schedule: profile.schedule,
+        updatedAt: FieldValue.serverTimestamp(),
+        updatedBy: req.user.uid,
+      },
+      { merge: true },
+    );
+
+    const updatedSnap = await userRef.get();
+    res.json({ user: { id: updatedSnap.id, ...updatedSnap.data() } });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function adminAttendance(req, res, next) {
   try {
-    let query = db.collection("attendance").limit(Number(req.query.limit || 100));
+    const limit = readLimit(req.query.limit);
+    let query = db.collection("attendance").limit(limit);
 
     if (req.query.date) {
-      query = db.collection("attendance").where("date", "==", req.query.date).limit(Number(req.query.limit || 100));
+      query = db.collection("attendance").where("date", "==", req.query.date).limit(limit);
     }
 
     const snap = await query.get();
@@ -146,6 +216,19 @@ export async function updateAttendance(req, res, next) {
 
     if (Object.prototype.hasOwnProperty.call(req.body, "punchOut")) {
       updates.punchOut = parseIsoToTimestamp(req.body.punchOut);
+    }
+
+    const nextPunchIn = Object.prototype.hasOwnProperty.call(updates, "punchIn")
+      ? updates.punchIn
+      : existingSnap.data().punchIn;
+    const nextPunchOut = Object.prototype.hasOwnProperty.call(updates, "punchOut")
+      ? updates.punchOut
+      : existingSnap.data().punchOut;
+    const punchInMillis = timestampMillis(nextPunchIn);
+    const punchOutMillis = timestampMillis(nextPunchOut);
+
+    if (punchInMillis && punchOutMillis && punchOutMillis <= punchInMillis) {
+      return res.status(400).json({ message: "Punch out must be later than punch in" });
     }
 
     await recordRef.update(updates);
@@ -180,30 +263,30 @@ export async function adminWeeklyReports(req, res, next) {
       .map(serializeDoc)
       .filter((report) => report.date >= weekStart && report.date <= weekEnd)
       .reduce((acc, report) => {
-      const key = report.userId;
-      const current = acc.get(key) || {
-        id: key,
-        userId: key,
-        employeeName: report.employeeName,
-        weekStart,
-        weekEnd,
-        regularHours: 0,
-        overtimeHours: 0,
-        nightDiffHours: 0,
-        lateMinutes: 0,
-        undertimeMinutes: 0,
-        totalWorkedHours: 0,
-      };
+        const key = report.userId;
+        const current = acc.get(key) || {
+          id: key,
+          userId: key,
+          employeeName: report.employeeName,
+          weekStart,
+          weekEnd,
+          regularHours: 0,
+          overtimeHours: 0,
+          nightDiffHours: 0,
+          lateMinutes: 0,
+          undertimeMinutes: 0,
+          totalWorkedHours: 0,
+        };
 
-      current.regularHours += report.regularHours || 0;
-      current.overtimeHours += report.overtimeHours || 0;
-      current.nightDiffHours += report.nightDiffHours || 0;
-      current.lateMinutes += report.lateMinutes || 0;
-      current.undertimeMinutes += report.undertimeMinutes || 0;
-      current.totalWorkedHours += report.totalWorkedHours || 0;
-      acc.set(key, current);
-      return acc;
-    }, new Map());
+        current.regularHours += report.regularHours || 0;
+        current.overtimeHours += report.overtimeHours || 0;
+        current.nightDiffHours += report.nightDiffHours || 0;
+        current.lateMinutes += report.lateMinutes || 0;
+        current.undertimeMinutes += report.undertimeMinutes || 0;
+        current.totalWorkedHours += report.totalWorkedHours || 0;
+        acc.set(key, current);
+        return acc;
+      }, new Map());
 
     res.json({ weekStart, weekEnd, reports: Array.from(grouped.values()) });
   } catch (error) {

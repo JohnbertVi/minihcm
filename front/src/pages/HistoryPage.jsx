@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import EmptyState from "@/components/EmptyState.jsx";
 import { TableSkeletonRows } from "@/components/LoadingStates.jsx";
 import PageHeader from "@/components/PageHeader.jsx";
+import { ATTENDANCE_CHANGED_EVENT } from "@/components/TimeClockWidget.jsx";
 import api from "@/services/api.js";
 import { getErrorMessage, notify } from "@/utils/feedback.js";
 import { formatDurationMinutes, formatTimestamp } from "@/utils/format.js";
@@ -23,26 +24,40 @@ export default function HistoryPage() {
   useEffect(() => {
     let active = true;
 
-    api
-      .get("/attendance/me")
-      .then(({ data }) => {
+    function loadRecords() {
+      api
+        .get("/attendance/me")
+        .then(({ data }) => {
+          if (active) {
+            setRecords(data.records);
+          }
+        })
+        .catch((err) => {
+          if (active) {
+            notify.error(getErrorMessage(err));
+          }
+        })
+        .finally(() => {
+          if (active) {
+            setLoading(false);
+          }
+        });
+    }
+
+    function refreshRecords() {
+      api.get("/attendance/me").then(({ data }) => {
         if (active) {
           setRecords(data.records);
         }
-      })
-      .catch((err) => {
-        if (active) {
-          notify.error(getErrorMessage(err));
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
       });
+    }
+
+    loadRecords();
+    window.addEventListener(ATTENDANCE_CHANGED_EVENT, refreshRecords);
 
     return () => {
       active = false;
+      window.removeEventListener(ATTENDANCE_CHANGED_EVENT, refreshRecords);
     };
   }, []);
 
@@ -100,7 +115,7 @@ export default function HistoryPage() {
       <Card className="hidden overflow-hidden border-emerald-100 bg-white shadow-sm md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1180px] text-left text-sm">
+            <table className="w-full min-w-[920px] text-left text-sm">
               <thead className="bg-emerald-50/80 text-xs uppercase text-emerald-800/70">
                 <tr>
                   <th className="px-4 py-3">Date</th>

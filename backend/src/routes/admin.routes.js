@@ -4,6 +4,7 @@ import {
   adminDailyReports,
   adminUsers,
   adminWeeklyReports,
+  updateAdminUser,
   updateAttendance,
 } from "../controllers/attendance.controller.js";
 import { requireAdmin } from "../middleware/admin.js";
@@ -14,6 +15,7 @@ const router = Router();
 router.use(requireAuth, requireAdmin);
 
 router.get("/users", adminUsers);
+router.patch("/users/:id", updateAdminUser);
 router.get("/attendance", adminAttendance);
 router.patch("/attendance/:id", updateAttendance);
 router.get("/reports/daily", adminDailyReports);

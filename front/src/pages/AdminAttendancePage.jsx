@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import ConfirmDialog from "@/components/ConfirmDialog.jsx";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,16 +19,45 @@ import PageHeader from "@/components/PageHeader.jsx";
 import api from "@/services/api.js";
 import { getErrorMessage, notify } from "@/utils/feedback.js";
 import { formatTimestamp, timestampToInput, todayIso } from "@/utils/format.js";
-import { Loader2, Pencil } from "lucide-react";
+import { Clock3, Pencil, ShieldCheck, UserRound } from "lucide-react";
 
 function localInputToIso(value) {
   return value ? new Date(value).toISOString() : null;
+}
+
+function buildEditingRecord(record) {
+  return {
+    ...record,
+    punchInInput: timestampToInput(record.punchIn),
+    punchOutInput: timestampToInput(record.punchOut),
+  };
+}
+
+function getPunchTimeError(punchInInput, punchOutInput) {
+  const punchIn = new Date(punchInInput);
+  const punchOut = new Date(punchOutInput);
+
+  if (!punchInInput || Number.isNaN(punchIn.getTime())) {
+    return "Enter a valid punch in time.";
+  }
+
+  if (!punchOutInput || Number.isNaN(punchOut.getTime())) {
+    return "Enter a valid punch out time.";
+  }
+
+  if (punchOut <= punchIn) {
+    return "Punch out must be later than punch in.";
+  }
+
+  return "";
 }
 
 export default function AdminAttendancePage() {
   const [date, setDate] = useState(todayIso());
   const [records, setRecords] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [punchTimeError, setPunchTimeError] = useState("");
+  const [confirmSaveOpen, setConfirmSaveOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -66,10 +96,35 @@ export default function AdminAttendancePage() {
     };
   }, [date]);
 
-
-
-  async function saveEdit(event) {
+  function requestSaveEdit(event) {
     event.preventDefault();
+
+    const validationError = getPunchTimeError(editing?.punchInInput, editing?.punchOutInput);
+
+    if (validationError) {
+      setPunchTimeError(validationError);
+      return;
+    }
+
+    setPunchTimeError("");
+    setConfirmSaveOpen(true);
+  }
+
+  function openEditor(record) {
+    setPunchTimeError("");
+    setEditing(buildEditingRecord(record));
+  }
+
+  function closeEditor() {
+    setPunchTimeError("");
+    setEditing(null);
+  }
+
+  async function saveEdit() {
+    if (!editing) {
+      return;
+    }
+
     setSaving(true);
 
     try {
@@ -77,6 +132,7 @@ export default function AdminAttendancePage() {
         punchIn: localInputToIso(editing.punchInInput),
         punchOut: localInputToIso(editing.punchOutInput),
       });
+      setConfirmSaveOpen(false);
       setEditing(null);
       await loadRecords();
       notify.success("Attendance updated and summary recomputed.");
@@ -90,9 +146,9 @@ export default function AdminAttendancePage() {
   return (
     <section className="space-y-6">
       <PageHeader
-        title="Admin Attendance"
-        description="View employee punches and correct records when needed."
-        meta="Admin tools"
+        title="Employee Records"
+        description="Review attendance history by date, inspect employee punch records, and correct punch times when needed."
+        meta="Administration"
         actions={
           <div className="w-full space-y-1.5 sm:w-auto">
             <Label htmlFor="date">Date</Label>
@@ -134,13 +190,7 @@ export default function AdminAttendancePage() {
                   variant="outline"
                   size="sm"
                   className="shrink-0 border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
-                  onClick={() =>
-                    setEditing({
-                      ...record,
-                      punchInInput: timestampToInput(record.punchIn),
-                      punchOutInput: timestampToInput(record.punchOut),
-                    })
-                  }
+                  onClick={() => openEditor(record)}
                 >
                   <Pencil className="mr-1.5 h-3.5 w-3.5" />
                   Edit
@@ -167,7 +217,7 @@ export default function AdminAttendancePage() {
       <Card className="hidden overflow-hidden border-emerald-100 bg-white shadow-sm md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[900px] text-left text-sm">
+            <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="bg-emerald-50/80 text-xs uppercase text-emerald-800/70">
                 <tr>
                   <th className="px-4 py-3">Employee</th>
@@ -194,13 +244,7 @@ export default function AdminAttendancePage() {
                         variant="outline"
                         size="sm"
                         className="border-emerald-200 text-emerald-800 hover:bg-emerald-50 hover:text-emerald-900"
-                        onClick={() =>
-                          setEditing({
-                            ...record,
-                            punchInInput: timestampToInput(record.punchIn),
-                            punchOutInput: timestampToInput(record.punchOut),
-                          })
-                        }
+                        onClick={() => openEditor(record)}
                       >
                         <Pencil className="mr-1.5 h-3.5 w-3.5" />
                         Edit
@@ -217,59 +261,103 @@ export default function AdminAttendancePage() {
         </CardContent>
       </Card>
 
-      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <form onSubmit={saveEdit}>
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && !saving && closeEditor()}>
+        <DialogContent className="border-emerald-100 bg-white text-emerald-950 sm:max-w-2xl">
+          <form onSubmit={requestSaveEdit}>
             <DialogHeader>
-              <DialogTitle>Edit {editing?.employeeName || editing?.email}</DialogTitle>
-              <DialogDescription>Saving recalculates the matching daily summary.</DialogDescription>
+              <DialogTitle className="text-xl">Edit Employee Punch Record</DialogTitle>
+              <DialogDescription className="text-emerald-800/70">
+                Adjust punch times for an employee attendance record. A confirmation is required before saving.
+              </DialogDescription>
             </DialogHeader>
 
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="punchIn">Punch In</Label>
-                <Input
-                  id="punchIn"
-                  type="datetime-local"
-                  required
-                  value={editing?.punchInInput || ""}
-                  onChange={(event) =>
-                    setEditing((prev) => (prev ? { ...prev, punchInInput: event.target.value } : prev))
-                  }
-                />
+            <div className="mt-5 space-y-5">
+              <div className="flex items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-700 shadow-sm">
+                  <UserRound className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-slate-950">
+                    {editing?.employeeName || editing?.email}
+                  </p>
+                  <p className="break-all text-xs text-slate-500">{editing?.email}</p>
+                </div>
+                <div className="rounded-md bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                  {editing?.date}
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="punchOut">Punch Out</Label>
-                <Input
-                  id="punchOut"
-                  type="datetime-local"
-                  required
-                  value={editing?.punchOutInput || ""}
-                  onChange={(event) =>
-                    setEditing((prev) => (prev ? { ...prev, punchOutInput: event.target.value } : prev))
-                  }
-                />
+
+              <div className="rounded-lg border border-emerald-100 bg-white p-4 shadow-sm">
+                <div className="mb-4 flex items-center gap-2">
+                  <Clock3 className="h-4 w-4 text-emerald-700" />
+                  <h3 className="text-sm font-semibold text-emerald-950">Punch Times</h3>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="punchIn">Punch In</Label>
+                    <Input
+                      id="punchIn"
+                      type="datetime-local"
+                      required
+                      value={editing?.punchInInput || ""}
+                      onChange={(event) => {
+                        setPunchTimeError("");
+                        setEditing((prev) => (prev ? { ...prev, punchInInput: event.target.value } : prev));
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="punchOut">Punch Out</Label>
+                    <Input
+                      id="punchOut"
+                      type="datetime-local"
+                      required
+                      value={editing?.punchOutInput || ""}
+                      aria-invalid={Boolean(punchTimeError)}
+                      aria-describedby={punchTimeError ? "punch-time-error" : undefined}
+                      onChange={(event) => {
+                        setPunchTimeError("");
+                        setEditing((prev) => (prev ? { ...prev, punchOutInput: event.target.value } : prev));
+                      }}
+                    />
+                    {punchTimeError && (
+                      <p id="punch-time-error" className="text-xs font-medium text-red-600">
+                        {punchTimeError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4 flex gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                  <p>
+                    Saving this record recalculates the matching daily summary, including regular hours, overtime, night differential, late, and undertime.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <DialogFooter className="mt-6 gap-2 sm:gap-0">
-              <Button type="button" variant="outline" onClick={() => setEditing(null)} disabled={saving}>
+            <DialogFooter className="mt-6 gap-2 sm:gap-2">
+              <Button type="button" variant="outline" onClick={closeEditor} disabled={saving}>
                 Cancel
               </Button>
               <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  "Save"
-                )}
+                Save Changes
               </Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmSaveOpen}
+        onOpenChange={setConfirmSaveOpen}
+        title="Save punch changes?"
+        description={`Confirm punch edits for ${editing?.employeeName || editing?.email || "this employee"}. This will recalculate the matching daily summary.`}
+        confirmLabel="Confirm Save"
+        cancelLabel="Review Again"
+        onConfirm={saveEdit}
+        loading={saving}
+      />
     </section>
   );
 }

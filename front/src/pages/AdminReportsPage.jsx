@@ -187,7 +187,7 @@ export default function AdminReportsPage() {
       <Card className="hidden overflow-hidden border-emerald-100 bg-white shadow-sm md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[1120px] text-left text-sm">
+            <table className="w-full min-w-[920px] text-left text-sm">
               <thead className="bg-emerald-50/80 text-xs uppercase text-emerald-800/70">
                 <tr>
                   <th className="px-4 py-3">Employee</th>
